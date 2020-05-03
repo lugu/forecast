@@ -3,7 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"os"
 	"time"
+
+	"github.com/wcharczuk/go-chart"
 )
 
 type Shipment struct {
@@ -23,7 +27,7 @@ type Parameters struct {
 
 type Simulation struct {
 	Date  []time.Time
-	Stock []int
+	Stock []float64
 	Cash  []float64
 	Param Parameters
 }
@@ -35,7 +39,7 @@ func NewSimulation(param Parameters) Simulation {
 
 	sim := Simulation{
 		Date:  make([]time.Time, param.duration),
-		Stock: make([]int, param.duration),
+		Stock: make([]float64, param.duration),
 		Cash:  make([]float64, param.duration),
 	}
 
@@ -43,7 +47,7 @@ func NewSimulation(param Parameters) Simulation {
 		date := time.Now().AddDate(0, 0, day)
 
 		sim.Date[day] = date
-		sim.Stock[day] = int(stock)
+		sim.Stock[day] = stock
 		sim.Cash[day] = cash
 
 		sellRate := param.weeklyRate / 7.0
@@ -108,7 +112,43 @@ func (s Simulation) Print() {
 	fmt.Printf("\n")
 	fmt.Printf("day\tcash\tstock\n")
 	for i := range s.Date {
-		fmt.Printf("%v\t%.2f\t%d\n", s.Date[i].Format("01-02-2006"), s.Cash[i], s.Stock[i])
+		fmt.Printf("%v\t%.2f\t%d\n", s.Date[i].Format("01-02-2006"), s.Cash[i], int(s.Stock[i]))
+	}
+}
+
+func (s Simulation) Draw(filename string) {
+
+	graph := chart.Chart{
+		XAxis: chart.XAxis{
+			TickPosition:   chart.TickPositionBetweenTicks,
+			ValueFormatter: chart.TimeHourValueFormatter,
+		},
+		Series: []chart.Series{
+			chart.TimeSeries{
+				Style: chart.Style{
+					StrokeColor: chart.GetDefaultColor(0).WithAlpha(64),
+					FillColor:   chart.GetDefaultColor(0).WithAlpha(64),
+				},
+				XValues: s.Date,
+				YValues: s.Stock,
+			},
+			chart.TimeSeries{
+				Style: chart.Style{
+					StrokeColor: chart.GetDefaultColor(1).WithAlpha(64),
+					FillColor:   chart.GetDefaultColor(1).WithAlpha(64),
+				},
+				YAxis:   chart.YAxisSecondary,
+				XValues: s.Date,
+				YValues: s.Cash,
+			},
+		},
+	}
+
+	f, _ := os.Create(filename)
+	defer f.Close()
+	err := graph.Render(chart.PNG, f)
+	if err != nil {
+		log.Print(err)
 	}
 }
 
@@ -122,6 +162,7 @@ func main() {
 	param.weeklyRate = 7.0
 	param.shipmentDelay = 14
 	param.duration = 365
+	image := "chart.png"
 
 	flag.Float64Var(&param.cash, "cash", param.cash, "initial investment (USD)")
 	flag.Float64Var(&param.weeklyRate, "rate", param.weeklyRate, "average sells per week (quantity)")
@@ -130,8 +171,10 @@ func main() {
 	flag.IntVar(&param.batch, "batch", param.batch, "size of each shipment (quantity)")
 	flag.IntVar(&param.shipmentDelay, "delay", param.shipmentDelay, "time to ship a batch (days)")
 	flag.IntVar(&param.duration, "days", param.duration, "simulation duration (days)")
+	flag.StringVar(&image, "image", image, "output PNG file")
 	flag.Parse()
 
 	sim := NewSimulation(param)
 	sim.Print()
+	sim.Draw(image)
 }
