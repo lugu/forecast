@@ -18,14 +18,19 @@ type Shipment struct {
 }
 
 type Parameters struct {
-	cash               float64
-	batch              int
-	unitCost           float64
-	unitBenefit        float64
+	Cash               float64
+	BatchSize          int
+	UnitCost           float64
+	UnitBenefit        float64
 	unitMonthlyStorage float64
-	weeklySales        float64
-	shipmentDelay      int
-	duration           int
+	WeeklySales        float64
+	ShipmentDelay      int
+	InitialStock       int
+	SimulationDuration int
+}
+
+type Config struct {
+	Parameters
 }
 
 type Simulation struct {
@@ -40,26 +45,27 @@ var (
 )
 
 func NewSimulation(param Parameters) Simulation {
-	stock := 0.0
-	cash := param.cash
+	stock := float64(param.InitialStock)
+	cash := param.Cash
 	shipments := []Shipment{}
 
+	duration := param.SimulationDuration * 30
 	sim := Simulation{
-		Date:  make([]time.Time, param.duration),
-		Stock: make([]float64, param.duration),
-		Cash:  make([]float64, param.duration),
+		Date:  make([]time.Time, duration),
+		Stock: make([]float64, duration),
+		Cash:  make([]float64, duration),
 		Param: param,
 	}
 
-	for day := 0; day < param.duration; day++ {
+	for day := 0; day < duration; day++ {
 		date := time.Now().AddDate(0, 0, day)
 
 		sim.Date[day] = date
 		sim.Stock[day] = stock
 		sim.Cash[day] = cash
 
-		sellRate := param.weeklySales / 7.0
-		batchCost := float64(param.batch) * param.unitCost
+		sellRate := param.WeeklySales / 7.0
+		batchCost := float64(param.BatchSize) * param.UnitCost
 
 		// storage cost
 		unitDailyStorage := param.unitMonthlyStorage / 30
@@ -69,7 +75,7 @@ func NewSimulation(param Parameters) Simulation {
 		for cash >= batchCost {
 
 			// optimal stock: two time the shipment delay
-			runway := sellRate * float64(param.shipmentDelay) * 2
+			runway := sellRate * float64(param.ShipmentDelay) * 2
 
 			// compute the pending amount before buying
 			// some more.
@@ -81,8 +87,8 @@ func NewSimulation(param Parameters) Simulation {
 			// buy stock if we need some more
 			if stock+float64(pending) < runway {
 				shipments = append(shipments, Shipment{
-					arrival:  day + param.shipmentDelay,
-					quantity: param.batch,
+					arrival:  day + param.ShipmentDelay,
+					quantity: param.BatchSize,
 				})
 				cash -= batchCost
 			} else {
@@ -104,10 +110,10 @@ func NewSimulation(param Parameters) Simulation {
 		}
 		if stock > sellRate {
 			stock -= sellRate
-			unitGain := param.unitCost + param.unitBenefit
+			unitGain := param.UnitCost + param.UnitBenefit
 			cash += sellRate * unitGain
 		} else {
-			unitGain := param.unitCost + param.unitBenefit
+			unitGain := param.UnitCost + param.UnitBenefit
 			cash += stock * unitGain
 			stock = 0
 		}
@@ -116,12 +122,12 @@ func NewSimulation(param Parameters) Simulation {
 }
 
 func (s Simulation) Print() {
-	fmt.Printf("cash\t%.2f\tinitial investment\n", s.Param.cash)
-	fmt.Printf("sales\t%.2f\tweekly sales\n", s.Param.weeklySales)
+	fmt.Printf("cash\t%.2f\tinitial investment\n", s.Param.Cash)
+	fmt.Printf("sales\t%.2f\tweekly sales\n", s.Param.WeeklySales)
 	fmt.Printf("storage\t%.2f\tstorage cost per unit per month\n", s.Param.unitMonthlyStorage)
-	fmt.Printf("cost\t%.2f\tprice of each unit\n", s.Param.unitCost)
-	fmt.Printf("margin\t%.2f\tmargin for each unit\n", s.Param.unitBenefit)
-	fmt.Printf("delay\t%d\tdays to ship\n", s.Param.shipmentDelay)
+	fmt.Printf("cost\t%.2f\tprice of each unit\n", s.Param.UnitCost)
+	fmt.Printf("margin\t%.2f\tmargin for each unit\n", s.Param.UnitBenefit)
+	fmt.Printf("delay\t%d\tdays to ship\n", s.Param.ShipmentDelay)
 	fmt.Printf("\n")
 	fmt.Printf("day\tcash\tstock\n")
 	for i := range s.Date {
@@ -134,7 +140,7 @@ func (s Simulation) Plot() (image.Image, error) {
 	graph := chart.Chart{
 		Title: "Stock vs Cash",
 		YAxis: chart.YAxis{
-			Name: "USD",
+			Name: "Euro",
 		},
 		YAxisSecondary: chart.YAxis{
 			Name: "Stock",
@@ -181,14 +187,14 @@ func statePlot(w *ui.Window) {
 	w.Row(25).Dynamic(2)
 
 	change := false
-	change = change || w.PropertyFloat("Initial investment (USD):", 0, &sim.Param.cash, 50000.0, 10, 10, 10)
-	change = change || w.PropertyFloat("Average sales per week:", 0, &sim.Param.weeklySales, 10000.0, 1, 0.2, 3)
-	change = change || w.PropertyFloat("Cost of each unit (USD):", 0, &sim.Param.unitCost, 1000.0, 1, 0.2, 3)
-	change = change || w.PropertyFloat("Margin for each unit (USD):", 0, &sim.Param.unitBenefit, 1000.0, 1, 0.2, 3)
-	change = change || w.PropertyInt("Size of each shipment:", 1, &sim.Param.batch, 1000, 1, 1)
-	change = change || w.PropertyInt("Shipment duration (days):", 1, &sim.Param.shipmentDelay, 100, 1, 1)
-	change = change || w.PropertyInt("Simulation duration (days):", 1, &sim.Param.duration, 10000, 1, 1)
-	change = change || w.PropertyFloat("Monthly storage per unit (USD):", 0, &sim.Param.unitMonthlyStorage, 100, 1, 0.2, 3)
+	change = change || w.PropertyFloat("Initial investment (Euro):", 0, &sim.Param.Cash, 50000.0, 10, 10, 10)
+	change = change || w.PropertyFloat("Average sales per week:", 0, &sim.Param.WeeklySales, 10000.0, 1, 0.2, 3)
+	change = change || w.PropertyFloat("Cost of each unit (Euro):", 0, &sim.Param.UnitCost, 1000.0, 1, 0.2, 3)
+	change = change || w.PropertyFloat("Margin for each unit (Euro):", 0, &sim.Param.UnitBenefit, 1000.0, 1, 0.2, 3)
+	change = change || w.PropertyInt("Size of each shipment:", 1, &sim.Param.BatchSize, 1000, 1, 1)
+	change = change || w.PropertyInt("Shipment duration (days):", 1, &sim.Param.ShipmentDelay, 100, 1, 1)
+	change = change || w.PropertyInt("Simulation duration (months):", 1, &sim.Param.SimulationDuration, 10000, 1, 1)
+	change = change || w.PropertyFloat("Monthly storage per unit (Euro):", 0, &sim.Param.unitMonthlyStorage, 100, 1, 0.2, 3)
 	if change {
 		sim = NewSimulation(sim.Param)
 	}
@@ -210,22 +216,22 @@ func updatefn(w *ui.Window) {
 func main() {
 	var param Parameters
 
-	param.cash = 1000.0
-	param.batch = 20
-	param.unitCost = 25.0
-	param.unitBenefit = 10.0
-	param.weeklySales = 7.0
-	param.shipmentDelay = 14
-	param.duration = 365
+	param.Cash = 1000.0
+	param.BatchSize = 20
+	param.UnitCost = 25.0
+	param.UnitBenefit = 10.0
+	param.WeeklySales = 7.0
+	param.ShipmentDelay = 14
+	param.SimulationDuration = 12
 	toPrint := false
 
-	flag.Float64Var(&param.cash, "cash", param.cash, "initial investment (USD)")
-	flag.Float64Var(&param.weeklySales, "sales", param.weeklySales, "average sales per week (quantity)")
-	flag.Float64Var(&param.unitCost, "cost", param.unitCost, "cost of each unit (USD)")
-	flag.Float64Var(&param.unitBenefit, "margin", param.unitBenefit, "margin for each unit (USD)")
-	flag.IntVar(&param.batch, "batch", param.batch, "size of each shipment (quantity)")
-	flag.IntVar(&param.shipmentDelay, "delay", param.shipmentDelay, "time to ship a batch (days)")
-	flag.IntVar(&param.duration, "days", param.duration, "simulation duration (days)")
+	flag.Float64Var(&param.Cash, "cash", param.Cash, "initial investment (Euro)")
+	flag.Float64Var(&param.WeeklySales, "sales", param.WeeklySales, "average sales per week (quantity)")
+	flag.Float64Var(&param.UnitCost, "cost", param.UnitCost, "cost of each unit (Euro)")
+	flag.Float64Var(&param.UnitBenefit, "margin", param.UnitBenefit, "margin for each unit (Euro)")
+	flag.IntVar(&param.BatchSize, "batch", param.BatchSize, "size of each shipment (quantity)")
+	flag.IntVar(&param.ShipmentDelay, "delay", param.ShipmentDelay, "time to ship a batch (days)")
+	flag.IntVar(&param.SimulationDuration, "months", param.SimulationDuration, "simulation duration (months)")
 	flag.BoolVar(&toPrint, "print", toPrint, "output CSV values")
 	flag.Parse()
 
