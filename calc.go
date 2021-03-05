@@ -181,12 +181,13 @@ func statePlot(w *ui.Window) {
 	w.Row(25).Dynamic(2)
 
 	change := false
-	change = change || w.PropertyFloat("Initial investment (USD):", 0, &sim.Param.cash, 10000.0, 10, 10, 10)
+	change = change || w.PropertyFloat("Initial investment (USD):", 0, &sim.Param.cash, 50000.0, 10, 10, 10)
 	change = change || w.PropertyFloat("Average sales per week:", 0, &sim.Param.weeklySales, 10000.0, 1, 0.2, 3)
 	change = change || w.PropertyFloat("Cost of each unit (USD):", 0, &sim.Param.unitCost, 1000.0, 1, 0.2, 3)
 	change = change || w.PropertyFloat("Margin for each unit (USD):", 0, &sim.Param.unitBenefit, 1000.0, 1, 0.2, 3)
 	change = change || w.PropertyInt("Size of each shipment:", 1, &sim.Param.batch, 1000, 1, 1)
 	change = change || w.PropertyInt("Shipment duration (days):", 1, &sim.Param.shipmentDelay, 100, 1, 1)
+	change = change || w.PropertyInt("Simulation duration (days):", 1, &sim.Param.duration, 10000, 1, 1)
 	change = change || w.PropertyFloat("Monthly storage per unit (USD):", 0, &sim.Param.unitMonthlyStorage, 100, 1, 0.2, 3)
 	if change {
 		sim = NewSimulation(sim.Param)
