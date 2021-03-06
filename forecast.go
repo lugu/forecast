@@ -6,6 +6,8 @@ import (
 	"image"
 	"image/draw"
 	"os"
+	"os/user"
+	"path"
 	"time"
 
 	ui "github.com/aarzilli/nucular"
@@ -45,7 +47,7 @@ type Simulation struct {
 var (
 	sim Simulation
 
-	configFileName = "config.yaml"
+	configFileName = "forecast-config.yaml"
 )
 
 func NewSimulation(param *Parameters) Simulation {
@@ -257,13 +259,16 @@ func writeParams(param *Parameters) error {
 }
 
 func main() {
+
+	usr, _ := user.Current()
+	configFileName = path.Join(usr.HomeDir, configFileName)
+
+	var toPrint = false
 	var param Parameters
 	if err := readParams(&param); err != nil {
 		fmt.Printf("Failed to read config file: %w\n", err)
 		os.Exit(1)
 	}
-
-	toPrint := false
 
 	flag.Float64Var(&param.Cash, "cash", param.Cash, "initial investment (Euro)")
 	flag.Float64Var(&param.WeeklySales, "sales", param.WeeklySales, "average sales per week (quantity)")
