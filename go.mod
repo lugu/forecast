@@ -1,4 +1,4 @@
-module github.com/lugu/calc
+module github.com/lugu/forecast
 
 go 1.14
 
