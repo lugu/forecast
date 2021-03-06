@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	"os"
 	"time"
 
 	ui "github.com/aarzilli/nucular"
 	"github.com/aarzilli/nucular/style"
+	"github.com/go-yaml/yaml"
 	"github.com/wcharczuk/go-chart"
 )
 
@@ -42,6 +44,8 @@ type Simulation struct {
 
 var (
 	sim Simulation
+
+	configFileName = "config.yaml"
 )
 
 func NewSimulation(param Parameters) Simulation {
@@ -213,16 +217,51 @@ func updatefn(w *ui.Window) {
 	statePlot(w)
 }
 
+func readParams(param *Parameters) error {
+	f, err := os.Open(configFileName)
+	if err != nil {
+		fmt.Printf("Failed to open config, using default values.\n")
+
+		param.Cash = 1000.0
+		param.BatchSize = 20
+		param.UnitCost = 25.0
+		param.UnitBenefit = 10.0
+		param.WeeklySales = 7.0
+		param.ShipmentDelay = 14
+		param.SimulationDuration = 12
+		return nil
+	}
+	defer f.Close()
+
+	decoder := yaml.NewDecoder(f)
+	err = decoder.Decode(param)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeParams(param *Parameters) error {
+	fmt.Printf("writing config\n")
+	f, err := os.Create(configFileName)
+	if err != nil {
+		return err
+	}
+	encoder := yaml.NewEncoder(f)
+	err = encoder.Encode(param)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func main() {
 	var param Parameters
+	if err := readParams(&param); err != nil {
+		fmt.Printf("Failed to read config file: %w\n", err)
+		os.Exit(1)
+	}
 
-	param.Cash = 1000.0
-	param.BatchSize = 20
-	param.UnitCost = 25.0
-	param.UnitBenefit = 10.0
-	param.WeeklySales = 7.0
-	param.ShipmentDelay = 14
-	param.SimulationDuration = 12
 	toPrint := false
 
 	flag.Float64Var(&param.Cash, "cash", param.Cash, "initial investment (Euro)")
@@ -233,6 +272,7 @@ func main() {
 	flag.IntVar(&param.ShipmentDelay, "delay", param.ShipmentDelay, "time to ship a batch (days)")
 	flag.IntVar(&param.SimulationDuration, "months", param.SimulationDuration, "simulation duration (months)")
 	flag.BoolVar(&toPrint, "print", toPrint, "output CSV values")
+	flag.StringVar(&configFileName, "config", configFileName, "config file")
 	flag.Parse()
 
 	if toPrint {
@@ -241,6 +281,8 @@ func main() {
 		sim = NewSimulation(param)
 		wnd := ui.NewMasterWindow(0, "Sales Simulation", updatefn)
 		wnd.SetStyle(style.FromTheme(style.DarkTheme, 2.0))
+		defer writeParams(&param)
+		// wnd.OnClose(func() { writeParams(&param) })
 		wnd.Main()
 	}
 }
