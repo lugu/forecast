@@ -139,10 +139,19 @@ func (s Simulation) Print() {
 	}
 }
 
-func (s Simulation) Plot() (image.Image, error) {
+func (s Simulation) Plot(width, height int) (image.Image, error) {
 
+	cashStyle := chart.Style{
+		StrokeColor: chart.GetDefaultColor(2).WithAlpha(64),
+		StrokeWidth: 2.0,
+	}
+	stockStyle := chart.Style{
+		StrokeColor: chart.GetDefaultColor(1).WithAlpha(64),
+		StrokeWidth: 2.0,
+	}
 	graph := chart.Chart{
-		Title: "Stock vs Cash",
+		Width:  width,
+		Height: height,
 		YAxis: chart.YAxis{
 			Name: "Euro",
 		},
@@ -155,21 +164,15 @@ func (s Simulation) Plot() (image.Image, error) {
 		},
 		Series: []chart.Series{
 			chart.TimeSeries{
-				Name: "Stock available",
-				Style: chart.Style{
-					StrokeColor: chart.GetDefaultColor(1).WithAlpha(64),
-					StrokeWidth: 2.0,
-				},
+				Name:    "Stock available",
+				Style:   stockStyle,
 				XValues: s.Date,
 				YValues: s.Stock,
 				YAxis:   chart.YAxisSecondary,
 			},
 			chart.TimeSeries{
-				Name: "Cash available",
-				Style: chart.Style{
-					StrokeColor: chart.GetDefaultColor(2).WithAlpha(64),
-					StrokeWidth: 2.0,
-				},
+				Name:    "Cash available",
+				Style:   cashStyle,
 				XValues: s.Date,
 				YValues: s.Cash,
 			},
@@ -188,22 +191,23 @@ func (s Simulation) Plot() (image.Image, error) {
 }
 
 func statePlot(w *ui.Window) {
-	w.Row(25).Dynamic(2)
+	w.Row(20).Dynamic(2)
 
 	change := false
 	change = change || w.PropertyFloat("Initial investment (Euro):", 0, &sim.Param.Cash, 50000.0, 10, 10, 10)
-	change = change || w.PropertyFloat("Average sales per week:", 0, &sim.Param.WeeklySales, 10000.0, 1, 0.2, 3)
-	change = change || w.PropertyFloat("Cost of each unit (Euro):", 0, &sim.Param.UnitCost, 1000.0, 1, 0.2, 3)
+	change = change || w.PropertyFloat("Average sales per week:", 0, &sim.Param.WeeklySales, 1000.0, 1, 0.2, 3)
+	change = change || w.PropertyFloat("Cost of each unit (Euro):", 0, &sim.Param.UnitCost, 2000.0, 1, 0.2, 3)
 	change = change || w.PropertyFloat("Margin for each unit (Euro):", 0, &sim.Param.UnitBenefit, 1000.0, 1, 0.2, 3)
-	change = change || w.PropertyInt("Size of each shipment:", 1, &sim.Param.BatchSize, 1000, 1, 1)
-	change = change || w.PropertyInt("Shipment duration (days):", 1, &sim.Param.ShipmentDelay, 100, 1, 1)
-	change = change || w.PropertyInt("Simulation duration (months):", 1, &sim.Param.SimulationDuration, 10000, 1, 1)
+	change = change || w.PropertyInt("Size of each shipment:", 1, &sim.Param.BatchSize, 2000, 1, 1)
+	change = change || w.PropertyInt("Shipment duration (days):", 1, &sim.Param.ShipmentDelay, 120, 1, 1)
+	change = change || w.PropertyInt("Simulation duration (months):", 1, &sim.Param.SimulationDuration, 60, 1, 1)
 	change = change || w.PropertyFloat("Monthly storage per unit (Euro):", 0, &sim.Param.unitMonthlyStorage, 100, 1, 0.2, 3)
 	if change {
 		sim = NewSimulation(sim.Param)
 	}
 	w.Row(0).Dynamic(1)
-	img, err := sim.Plot()
+	rect := w.WidgetBounds()
+	img, err := sim.Plot(rect.W, rect.H)
 	if err != nil {
 		w.LabelWrap(err.Error())
 	} else {
