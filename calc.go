@@ -39,7 +39,7 @@ type Simulation struct {
 	Date  []time.Time
 	Stock []float64
 	Cash  []float64
-	Param Parameters
+	Param *Parameters
 }
 
 var (
@@ -48,7 +48,7 @@ var (
 	configFileName = "config.yaml"
 )
 
-func NewSimulation(param Parameters) Simulation {
+func NewSimulation(param *Parameters) Simulation {
 	stock := float64(param.InitialStock)
 	cash := param.Cash
 	shipments := []Shipment{}
@@ -220,8 +220,6 @@ func updatefn(w *ui.Window) {
 func readParams(param *Parameters) error {
 	f, err := os.Open(configFileName)
 	if err != nil {
-		fmt.Printf("Failed to open config, using default values.\n")
-
 		param.Cash = 1000.0
 		param.BatchSize = 20
 		param.UnitCost = 25.0
@@ -242,7 +240,6 @@ func readParams(param *Parameters) error {
 }
 
 func writeParams(param *Parameters) error {
-	fmt.Printf("writing config\n")
 	f, err := os.Create(configFileName)
 	if err != nil {
 		return err
@@ -276,13 +273,19 @@ func main() {
 	flag.Parse()
 
 	if toPrint {
-		NewSimulation(param).Print()
+		NewSimulation(&param).Print()
 	} else {
-		sim = NewSimulation(param)
+		sim = NewSimulation(&param)
 		wnd := ui.NewMasterWindow(0, "Sales Simulation", updatefn)
 		wnd.SetStyle(style.FromTheme(style.DarkTheme, 2.0))
-		defer writeParams(&param)
-		// wnd.OnClose(func() { writeParams(&param) })
+		wnd.OnClose(func() {
+			if err := writeParams(&param); err != nil {
+				fmt.Printf("Failed to write config: %w\n", err)
+				os.Exit(1)
+			}
+			os.Exit(0)
+		})
 		wnd.Main()
 	}
+	writeParams(&param)
 }
