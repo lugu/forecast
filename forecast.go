@@ -143,17 +143,25 @@ func (s Simulation) Print() {
 
 func (s Simulation) Plot(width, height int) (image.Image, error) {
 
-	cashStyle := chart.Style{
-		StrokeColor: chart.GetDefaultColor(2).WithAlpha(64),
+	stockStyle := chart.Style{
+		StrokeColor: chart.GetDefaultColor(1),
 		StrokeWidth: 2.0,
 	}
-	stockStyle := chart.Style{
-		StrokeColor: chart.GetDefaultColor(1).WithAlpha(64),
+	cashStyle := chart.Style{
+		StrokeColor: chart.GetDefaultColor(2),
 		StrokeWidth: 2.0,
 	}
 	graph := chart.Chart{
 		Width:  width,
 		Height: height,
+		Background: chart.Style{
+			Padding: chart.Box{
+				Top:    12,
+				Bottom: 12,
+				Left:   12,
+				Right:  12,
+			},
+		},
 		YAxis: chart.YAxis{
 			Name: "Euro",
 		},
