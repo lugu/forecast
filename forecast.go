@@ -151,6 +151,9 @@ func (s Simulation) Plot(width, height int) (image.Image, error) {
 		StrokeColor: chart.GetDefaultColor(2),
 		StrokeWidth: 2.0,
 	}
+	legendStyle := chart.Style{
+		FontSize: 12.0,
+	}
 	graph := chart.Chart{
 		Width:  width,
 		Height: height,
@@ -189,7 +192,7 @@ func (s Simulation) Plot(width, height int) (image.Image, error) {
 		},
 	}
 	graph.Elements = []chart.Renderable{
-		chart.Legend(&graph),
+		chart.LegendThin(&graph, legendStyle),
 	}
 
 	collector := &chart.ImageWriter{}
