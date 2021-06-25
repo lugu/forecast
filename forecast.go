@@ -30,6 +30,7 @@ type Parameters struct {
 	WeeklySales        float64
 	ShipmentDelay      int
 	InitialStock       int
+	MaximumStock       int
 	SimulationDuration int
 }
 
@@ -70,7 +71,7 @@ func NewSimulation(param *Parameters) Simulation {
 		sim.Stock[day] = stock
 		sim.Cash[day] = cash
 
-		sellRate := param.WeeklySales / 7.0
+		dailySaleRate := param.WeeklySales / 7.0
 		batchCost := float64(param.BatchSize) * param.UnitCost
 
 		// storage cost
@@ -81,7 +82,7 @@ func NewSimulation(param *Parameters) Simulation {
 		for cash >= batchCost {
 
 			// optimal stock: two time the shipment delay
-			runway := sellRate * float64(param.ShipmentDelay) * 2
+			runway := dailySaleRate*float64(param.ShipmentDelay) + float64(param.BatchSize)
 
 			// compute the pending amount before buying
 			// some more.
@@ -114,10 +115,10 @@ func NewSimulation(param *Parameters) Simulation {
 				break
 			}
 		}
-		if stock > sellRate {
-			stock -= sellRate
+		if stock > dailySaleRate {
+			stock -= dailySaleRate
 			unitGain := param.UnitCost + param.UnitBenefit
-			cash += sellRate * unitGain
+			cash += dailySaleRate * unitGain
 		} else {
 			unitGain := param.UnitCost + param.UnitBenefit
 			cash += stock * unitGain
@@ -286,6 +287,8 @@ func main() {
 	flag.Float64Var(&param.UnitCost, "cost", param.UnitCost, "cost of each unit (Euro)")
 	flag.Float64Var(&param.UnitBenefit, "margin", param.UnitBenefit, "margin for each unit (Euro)")
 	flag.IntVar(&param.BatchSize, "batch", param.BatchSize, "size of each shipment (quantity)")
+	flag.IntVar(&param.InitialStock, "stock", param.InitialStock, "initial stock (quantity)")
+	flag.IntVar(&param.MaximumStock, "max", param.MaximumStock, "maximumStock stock (quantity)")
 	flag.IntVar(&param.ShipmentDelay, "delay", param.ShipmentDelay, "time to ship a batch (days)")
 	flag.IntVar(&param.SimulationDuration, "months", param.SimulationDuration, "simulation duration (months)")
 	flag.BoolVar(&toPrint, "print", toPrint, "output CSV values")
