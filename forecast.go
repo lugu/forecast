@@ -297,7 +297,7 @@ func main() {
 	} else {
 		sim = NewSimulation(&param)
 		wnd := ui.NewMasterWindow(0, "Sales Simulation", updatefn)
-		wnd.SetStyle(style.FromTheme(style.DarkTheme, 2.0))
+		wnd.SetStyle(style.FromTheme(style.RedTheme, 1.5))
 		wnd.OnClose(func() {
 			if err := writeParams(&param); err != nil {
 				fmt.Printf("Failed to write config: %w\n", err)
