@@ -26,7 +26,7 @@ type Parameters struct {
 	BatchSize          int
 	UnitCost           float64
 	UnitBenefit        float64
-	unitMonthlyStorage float64
+	MonthlyStorageCost float64
 	WeeklySales        float64
 	ShipmentDelay      int
 	InitialStock       int
@@ -75,7 +75,7 @@ func NewSimulation(param *Parameters) Simulation {
 		batchCost := float64(param.BatchSize) * param.UnitCost
 
 		// storage cost
-		unitDailyStorage := param.unitMonthlyStorage / 30
+		unitDailyStorage := param.MonthlyStorageCost / 30
 		cash -= stock * unitDailyStorage
 
 		// if we can buy some more stock
@@ -91,8 +91,11 @@ func NewSimulation(param *Parameters) Simulation {
 				pending += shipment.quantity
 			}
 
-			// buy stock if we need some more
-			if stock+float64(pending) < runway {
+			// buy stock if we need some more and if we
+			// have enough storage capacity
+			if stock+float64(pending) < runway &&
+				stock+float64(pending) < float64(param.MaximumStock) {
+
 				shipments = append(shipments, Shipment{
 					arrival:  day + param.ShipmentDelay,
 					quantity: param.BatchSize,
@@ -131,7 +134,7 @@ func NewSimulation(param *Parameters) Simulation {
 func (s Simulation) Print() {
 	fmt.Printf("cash\t%.2f\tinitial investment\n", s.Param.Cash)
 	fmt.Printf("sales\t%.2f\tweekly sales\n", s.Param.WeeklySales)
-	fmt.Printf("storage\t%.2f\tstorage cost per unit per month\n", s.Param.unitMonthlyStorage)
+	fmt.Printf("storage\t%.2f\tstorage cost per unit per month\n", s.Param.MonthlyStorageCost)
 	fmt.Printf("cost\t%.2f\tprice of each unit\n", s.Param.UnitCost)
 	fmt.Printf("margin\t%.2f\tmargin for each unit\n", s.Param.UnitBenefit)
 	fmt.Printf("delay\t%d\tdays to ship\n", s.Param.ShipmentDelay)
@@ -215,7 +218,8 @@ func statePlot(w *ui.Window) {
 	change = change || w.PropertyInt("Size of each shipment:", 1, &sim.Param.BatchSize, 2000, 1, 1)
 	change = change || w.PropertyInt("Shipment duration (days):", 1, &sim.Param.ShipmentDelay, 120, 1, 1)
 	change = change || w.PropertyInt("Simulation duration (months):", 1, &sim.Param.SimulationDuration, 60, 1, 1)
-	change = change || w.PropertyFloat("Monthly storage per unit (Euro):", 0, &sim.Param.unitMonthlyStorage, 100, 1, 0.2, 3)
+	change = change || w.PropertyFloat("Monthly storage cost per unit (Euro):", 0, &sim.Param.MonthlyStorageCost, 100, 1, 0.2, 3)
+	change = change || w.PropertyInt("Maximum storage capacity (units):", 1, &sim.Param.MaximumStock, 50000, 1, 1)
 	if change {
 		sim = NewSimulation(sim.Param)
 	}
@@ -245,6 +249,7 @@ func readParams(param *Parameters) error {
 		param.WeeklySales = 7.0
 		param.ShipmentDelay = 14
 		param.SimulationDuration = 12
+		param.MaximumStock = 10000
 		return nil
 	}
 	defer f.Close()
