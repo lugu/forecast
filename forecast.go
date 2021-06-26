@@ -32,6 +32,7 @@ type Parameters struct {
 	InitialStock       int
 	MaximumStock       int
 	SimulationDuration int
+	AdsDailyBudget     float64
 }
 
 type Config struct {
@@ -127,6 +128,9 @@ func NewSimulation(param *Parameters) Simulation {
 			cash += stock * unitGain
 			stock = 0
 		}
+		if stock > 0 && cash > param.AdsDailyBudget {
+			cash -= param.AdsDailyBudget
+		}
 	}
 	return sim
 }
@@ -214,12 +218,13 @@ func statePlot(w *ui.Window) {
 	change = change || w.PropertyFloat("Initial investment (Euro):", 0, &sim.Param.Cash, 50000.0, 10, 10, 10)
 	change = change || w.PropertyFloat("Average sales per week:", 0, &sim.Param.WeeklySales, 1000.0, 1, 0.2, 3)
 	change = change || w.PropertyFloat("Cost of each unit (Euro):", 0, &sim.Param.UnitCost, 2000.0, 1, 0.2, 3)
+	change = change || w.PropertyFloat("Ads daily budget (Euro):", 0, &sim.Param.AdsDailyBudget, 100, 0.05, 0.05, 3)
+	change = change || w.PropertyInt("Batch size (units):", 1, &sim.Param.BatchSize, 2000, 1, 1)
 	change = change || w.PropertyFloat("Margin for each unit (Euro):", 0, &sim.Param.UnitBenefit, 1000.0, 1, 0.2, 3)
-	change = change || w.PropertyInt("Size of each shipment:", 1, &sim.Param.BatchSize, 2000, 1, 1)
-	change = change || w.PropertyInt("Shipment duration (days):", 1, &sim.Param.ShipmentDelay, 120, 1, 1)
+	change = change || w.PropertyInt("Lead time (days):", 1, &sim.Param.ShipmentDelay, 120, 1, 1)
+	change = change || w.PropertyFloat("Monthly storage cost per unit (Euro):", 0, &sim.Param.MonthlyStorageCost, 100, 0.05, 0.05, 3)
 	change = change || w.PropertyInt("Simulation duration (months):", 1, &sim.Param.SimulationDuration, 60, 1, 1)
-	change = change || w.PropertyFloat("Monthly storage cost per unit (Euro):", 0, &sim.Param.MonthlyStorageCost, 100, 1, 0.2, 3)
-	change = change || w.PropertyInt("Maximum storage capacity (units):", 1, &sim.Param.MaximumStock, 50000, 1, 1)
+	change = change || w.PropertyInt("Maximum storage capacity (units):", 100, &sim.Param.MaximumStock, 50000, 50, 5)
 	if change {
 		sim = NewSimulation(sim.Param)
 	}
@@ -291,6 +296,7 @@ func main() {
 	flag.Float64Var(&param.WeeklySales, "sales", param.WeeklySales, "average sales per week (quantity)")
 	flag.Float64Var(&param.UnitCost, "cost", param.UnitCost, "cost of each unit (Euro)")
 	flag.Float64Var(&param.UnitBenefit, "margin", param.UnitBenefit, "margin for each unit (Euro)")
+	flag.Float64Var(&param.AdsDailyBudget, "ads", param.AdsDailyBudget, "ads daily budget (Euro)")
 	flag.IntVar(&param.BatchSize, "batch", param.BatchSize, "size of each shipment (quantity)")
 	flag.IntVar(&param.InitialStock, "stock", param.InitialStock, "initial stock (quantity)")
 	flag.IntVar(&param.MaximumStock, "max", param.MaximumStock, "maximumStock stock (quantity)")
